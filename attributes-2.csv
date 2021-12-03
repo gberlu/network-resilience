@@ -1,0 +1,69 @@
+id,nationality,task,role,affiliation-1,affiliation-2,status,targeted,time-1,time-2,time-3
+N001,Italian,Buyer,Distribution,Jerinò-D'Agostino,Ndrangheta,Medium,1,1,1,1
+N002,Italian,Trafficker,Importation,Pesce-Bellocco,Ndrangheta,High,1,1,1,1
+N004,Italian,Supplier,Supply,Serraino-Di Giovine,Ndrangheta,High,1,1,1,1
+N005,Moroccan,Supplier,Supply,Moroccan clan,Moroccan clan,High,1,1,1,1
+N006,Italian,Support,Importation,Serraino-Di Giovine,Ndrangheta,Medium,1,1,1,0
+N007,Italian,Support,Importation,Serraino-Di Giovine,Ndrangheta,Medium,1,1,1,1
+N009,Italian,Supplier,Supply,No affiliation,No affiliation,Medium,0,1,1,0
+N013,Italian,Trafficker,Importation,Jerinò-D'Agostino,Ndrangheta,Medium,1,1,1,1
+N018,Italian,Support,Importation,Pesce-Bellocco,Ndrangheta,Medium,1,1,1,0
+N019,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,0,0,1,0
+N021,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,0,1,1,0
+N027,Italian,Trafficker,Importation,Pesce-Bellocco,Ndrangheta,Medium,1,1,1,0
+N029,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,1,1,1,1
+N031,Italian,Trafficker,Importation,Da Ponte-Cannizzaro,Ndrangheta,Medium,1,1,1,1
+N032,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,0,0,1,1
+N033,Italian,Supplier,Supply,No affiliation,No affiliation,Medium,1,1,1,1
+N034,Moroccan,Trafficker,Importation,No affiliation,No affiliation,Medium,0,0,1,1
+N035,Italian,Trafficker,Importation,Da Ponte-Cannizzaro,Ndrangheta,Medium,1,1,1,1
+N038,Italian,Trafficker,Importation,No affiliation,No affiliation,Medium,1,1,1,0
+N040,Italian,Trafficker,Importation,Da Ponte-Cannizzaro,Ndrangheta,Medium,1,1,1,1
+N041,Italian,Buyer,Distribution,Da Ponte-Cannizzaro,Ndrangheta,High,1,1,1,1
+N043,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,0,1,1,0
+N047,Italian,Trafficker,Importation,No affiliation,No affiliation,Medium,1,1,1,0
+N051,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,0,0,1,0
+N055,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,1,1,1,0
+N058,Italian,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Medium,0,1,1,0
+N060,Moroccan,Trafficker,Importation,Moroccan clan,Moroccan clan,Medium,1,1,1,1
+N061,Moroccan,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Low,0,1,1,0
+N062,Moroccan,Courier,Importation,Moroccan clan,Moroccan clan,Low,0,1,1,1
+N063,Moroccan,Trafficker,Importation,Moroccan clan,Moroccan clan,Medium,1,1,1,1
+N064,Moroccan,Support,Importation,Moroccan clan,Moroccan clan,Low,1,1,1,0
+N065,Italian,Supplier,Supply,Pesce-Bellocco,Ndrangheta,Medium,1,0,1,1
+N066,Italian,Supplier,Supply,No affiliation,No affiliation,Medium,1,0,1,1
+N067,Moroccan,Unknown,Unknown/Peripheral involvement,Moroccan clan,Moroccan clan,Low,0,0,1,0
+N068,Moroccan,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Low,0,0,1,0
+N069,Unknown,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Low,0,0,1,0
+N070,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,1,0,1,0
+N071,Moroccan,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Low,0,0,1,1
+N073,Italian,Buyer,Distribution,Da Ponte-Cannizzaro,Ndrangheta,High,0,0,1,0
+N074,Moroccan,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Low,0,0,1,0
+N075,Italian,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Medium,0,0,1,0
+N076,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,0,0,1,0
+N077,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,0,0,1,0
+N078,Italian,Support,Distribution,No affiliation,No affiliation,Low,0,0,1,0
+N079,Italian,Buyer,Distribution,Mazzaferro,Ndrangheta,Medium,0,0,1,0
+N080,Italian,Buyer,Distribution,Jerinò-D'Agostino,Ndrangheta,High,1,0,1,1
+N081,Italian,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Medium,0,0,1,0
+N082,Italian,Trafficker,Importation,No affiliation,No affiliation,Medium,1,0,1,1
+N083,Italian,Support,Distribution,No affiliation,No affiliation,Low,1,0,1,1
+N084,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,0,0,1,0
+N085,Italian,Courier,Importation,No affiliation,No affiliation,Low,0,0,1,0
+N086,Italian,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Medium,0,0,1,0
+N087,Italian,Courier,Importation,Mazzaferro,Ndrangheta,Low,1,0,1,0
+N088,Italian,Buyer,Distribution,No affiliation,No affiliation,Medium,0,0,1,0
+N089,Italian,Courier,Importation,No affiliation,No affiliation,Low,1,0,1,1
+N090,Italian,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Low,0,0,1,0
+N091,Italian,Support,Distribution,No affiliation,No affiliation,Low,0,0,1,0
+N092,Italian,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Low,0,0,1,0
+N093,Italian,Courier,Importation,No affiliation,No affiliation,Low,0,0,1,0
+N094,Italian,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Medium,0,0,1,0
+N116,Moroccan,Trafficker,Importation,Moroccan clan,Moroccan clan,Medium,1,0,1,1
+N118,Colombian,Support,Supply,No affiliation,No affiliation,Low,0,0,1,0
+N119,Italian,Unknown,Unknown/Peripheral involvement,No affiliation,No affiliation,Low,0,0,1,0
+N122,Italian,Buyer,Distribution,Perri,Ndrangheta,Medium,0,0,1,0
+N123,Italian,Buyer,Distribution,Perri,Ndrangheta,Medium,0,0,1,0
+N124,Unknown,Supplier,Supply,No affiliation,No affiliation,Medium,0,0,1,0
+N125,Italian,Supplier,Supply,No affiliation,No affiliation,Medium,0,0,1,0
+N126,Italian,Supplier,Supply,No affiliation,No affiliation,Medium,0,0,1,0
