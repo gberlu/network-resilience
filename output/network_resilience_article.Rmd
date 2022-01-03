@@ -1,0 +1,530 @@
+---
+output: 
+  html_document:
+    fig_width: 8
+    fig_height: 7
+    theme: readable
+title: "Come at the king, you best not miss: criminal network adaptation after law enforcement targeting of key players"
+author:
+  - name: Giulia Berlusconi
+    affiliation: University of Surrey
+    email: g.berlusconi@surrey.ac.uk
+date: "Article accepted for publication in Global Crime on 25th November 2021"
+bibliography: references.bib
+---
+
+```{r getting started, include = FALSE}
+
+# load packages
+library(network) # network analysis
+library(sna)
+library(ergm)
+library(haven) # data management
+library(tidyverse)
+library(kableExtra) # print tables
+library(modelsummary) # get model summary tables
+library(wesanderson) # color palette
+
+# read in co-offending data, and store them in a list
+mat_list <- list(read.csv("data/co-offending-1.csv", header = FALSE, sep = ","), # edgelist for network at time 1
+                 read.csv("data/co-offending-2.csv", header = FALSE, sep = ","), # edgelist for network at time 2
+                 read.csv("data/co-offending-3.csv", header = FALSE, sep = ",")) # edgelist for network at time 3
+
+# read in attribute data, and store them in a list
+att_list <- list(read.csv("data/attributes-1.csv", header = TRUE, sep = ","), # attributes for network at time 1
+                 read.csv("data/attributes-2.csv", header = TRUE, sep = ","), # attributes for network at time 2
+                 read.csv("data/attributes-3.csv", header = TRUE, sep = ",")) # attributes for network at time 3
+
+# create empty network objects, and store them in a list
+net_list <- list(network.initialize(length(att_list[[1]]$id), directed = FALSE), # initialize network with right no. nodes (length of list of node labels at time 1)
+                 network.initialize(length(att_list[[2]]$id), directed = FALSE), # repeat for time 2
+                 network.initialize(length(att_list[[3]]$id), directed = FALSE)) # and then again for time 3
+
+# add names to nodes and values to edges to get co-offending networks
+for (i in 1:3){
+  network.vertex.names(net_list[[i]]) <- as.vector(att_list[[i]]$id) # assign names to nodes
+  net_list[[i]][as.matrix(mat_list[[i]][, 1:2])] <- 1 # add in edges from the edgelist to the network object
+  set.vertex.attribute(net_list[[i]], attrname = colnames(att_list[[i]][2:11]), value = att_list[[i]][, 2:11]) # add attributes and their names from att_list
+}
+
+```
+
+### Abstract
+
+This paper investigates the impact of the targeting of key players by law enforcement on the structure, communication strategies, and activities of a drug trafficking network. Data are extracted from judicial court documents. The unique nature of the investigation—which saw a key player being arrested mid-investigation but police monitoring continuing for another year—allows to compare the network before and after targeting. This paper combines a quantitative element where network statistics and exponential random graph models are used to describe and explain structural changes over time, and a qualitative element where the content of wiretapped conversations is analysed. After law enforcement targeting, network members favoured security over efficiency, although criminal collaboration continued after the arrest of the key player. This paper contributes to the growing literature on the efficiency-security trade-off in criminal networks, and discusses policy implications for repressive policies in illegal drug markets.
+
+**Keywords:** law enforcement; criminal networks; illegal drug markets; resilience.
+
+### Introduction
+
+More than ten years after Morselli and Petit’s [-@morselli_law-enforcement_2007] article on law enforcement disruption of a drug importation network, our understanding of network recovery and adaptation after law enforcement targeting is still based on a limited number of empirical studies, and even fewer focusing on drug trafficking networks [@helfstein_2011; @bright_delaney_2013; @bright_dynamics_2019; @ouellet_2017; @mcmillan_2020]. Simulation studies have attempted to fill this gap by comparing different targeting strategies, and considering various ways in which network members may adapt to new conditions and continue their illicit activities [@duijn_2014; @bright_adaptation_2017; @duxbury_2019]. There remains, however, a need for further research on the adaptive capacities of criminal networks to further our understanding of the drivers of network structure, and to inform law enforcement policy and practice [@morselli_2009].
+
+Inspired by Morselli and Petit’s original study, this paper investigates how a drug trafficking network recovers and adapts after one of his key players is arrested by law enforcement agencies. It focuses on criminal collaboration patterns in a context of increased law enforcement risk, and on the impact of law enforcement targeting on communication strategies and illegal activities of network members. It combines a quantitative analysis of the main drivers of criminal collaboration—using social network analysis measures and Exponential Random Graph Models (ERGMs)—with a qualitative analysis of the content of wiretapped telephone conversations, which helps make sense of the quantitative results.
+
+This study identifies the social processes that facilitate organisational survival and adaptation. Throughout the analyses, Carlo Morselli’s idea of ‘flexible order’ was a reminder that network structure is not planned but rather emerges from interactions [@morselli_2009]. After law enforcement targeting, criminal network members show a preference for security over efficiency by favouring indirect ties and limiting communication, although criminal collaboration continues. Kinship ties help reduce uncertainty and facilitate trust among network members. While the number of drug consignments decreases after the arrest of the key player, the network maintains its operational activity until it is eventually dismantled a year later when most of its members are arrested.
+
+The paper begins with a discussion of common strategies to target key players in criminal networks, and the impact that they might have based on whether network members will favour efficiency or security. The following section introduces the data and the analytical strategy, and discusses the use of ERGMs for the analysis of the drivers of criminal collaboration. After a section reporting the main findings of the social network analysis and the content analysis of telephone conversations, the final section considers some avenues for future research, and discusses some of the policy implications that can be drawn from empirical analyses of law enforcement targeting and criminal resilience.
+
+### Key player targeting and network adaptation
+
+Since Sparrow’s seminal article on criminal network vulnerabilities, scholars have put forward a variety of strategies to identify actors whose removal is likely to lead to network disruption [@sparrow_1991]. While suggestions range from focusing on actors’ positioning within the network to targeting individuals who possess certain attributes or resources (e.g., money or specialised skills), there seems to be agreement on the value of adopting a key player strategy [@bright_adaptation_2017; @carley_2002; @carley_2006; @robins_2009; @schwartz_2009]. Simulation studies have proven that targeting central actors could indeed be effective, especially when law enforcement efforts are concentrated on those with a brokerage position within the network [@bright_adaptation_2017; @cavallaro_2020; @duxbury_2019]. However, the effectiveness of this approach depends on whether and how criminal networks adapt to disruption [@albert_2002; @morselli_efficiency_2007; @duijn_2014].
+
+Most research on key players and their removal has focused on network robustness (i.e., how to increase network vulnerability via targeted interventions) rather than network recovery and adaptation after law enforcement intervention [@malm_2011]. The aftermath of disruption has seldom been considered in criminal network research, leaving us with little information on how network members respond to variation in law enforcement activity [@morselli_law-enforcement_2007; @duijn_2014; @duxbury_2019]. This is particularly surprising given that criminal networks are often described as flexible and able to quickly adapt to new conditions and re-organise beyond node replacement [@morselli_efficiency_2007; @morselli_law-enforcement_2007; @bright_delaney_2013; @eilstrup-sangiovanni_2008]. Criminal networks need to constantly balance ‘the need to act collectively and the need to assure trust and secrecy in these risky collaborative settings’ [@morselli_efficiency_2007, p. 144]. In the context of increased law enforcement risk, it may be reasonable to assume that the efficiency-security dilemma becomes even more acute.
+
+After law enforcement targeting, network participants are likely to have a higher perception of risk. This may lead them to prioritise security over efficiency in the aftermath of an arrest [@erickson_1981]. They might limit interactions with other network participants and minimise communication channels, making the network sparser than before [@morselli_2009; @baker_1993]. Key actors not targeted by law enforcement may reduce their direct involvement in the illicit activities carried out by the group, and start to delegate more. Geodesic distances (i.e., shortest paths between any two nodes) are likely to increase in length, and chain-like patterns of connection may appear or become more prevalent [@helfstein_2011; @baker_1993; @krebs_2001; @bright_dynamics_2019]. As a result, the network might become more decentralised, with no or fewer highly connected individuals, and a more uniform degree distribution [@duxbury_2019].
+
+Whether new individuals enter the network, or new ties are formed between two existing members, trust may drive individual decisions to collaborate [@tremblay_1993; @mccarthy_1998; @campana_2013]. Sharing similar individual attributes (e.g., ethnicity, language) can make interaction easier and contributes to building trust between network participants, even when this is based on stereotypes or shared values [@von_lampe_2004; @grund_2015]. Pre-existing relations might become relevant for recruitment [@erickson_1981]. Kinship and formal organisational ties contribute to reducing uncertainty and increasing trust among network members, thus making collaborations more likely [@smith_2016; @campana_2013]. These types of ties (and multiplex ties more generally) are particularly relevant for criminal collaboration, because they can lead to highly cohesive—and therefore efficient—networks while also building trust among network members, and maintaining some level of security [@malm_2010].^[Multiplexity exists when a pair of individuals shares various types of relationships. Please see Kadushin's *Understanding Social Networks: Theories, Concepts, and Findings* for an introduction and further details.]
+
+Despite a preference for security, network members will need to continue engage in profitable illegal activities. The need to re-organise and make up for losses in the aftermath of law enforcement targeting might require even more co-ordination among network members than prior to disruption. Actors with different roles or at different stages at the crime commission process (e.g., drug importation and distribution) might need to communicate frequently to ensure illegal activities are carried out without any further problems [@bright_delaney_2013; @malm_2013]. Key actors might become more involved in day-to-day operations, increasing network centralisation as well as their own vulnerability [@baker_1993; @duijn_2014; @morselli_2009; @duxbury_2019; @bright_dynamics_2019]. New ties will likely shorten geodesic distances and favour collaboration in dense, local groups, resulting in triadic closure [@morselli_efficiency_2007].
+
+The way in which network actors resolve the efficiency-security dilemma will impact on the internal structure of the criminal group. Adaptation to law enforcement targeting can therefore be understood as a self-organised process that emerges from the way in which the remaining (and new) network participants interact with each other [@morselli_2009; @baker_1993; @duijn_2014]. This study builds on the little yet informative research on law enforcement disruption and illicit network dynamics, and investigates co-offending patterns and communication strategies of the members of a drug trafficking network before and after targeting [@morselli_law-enforcement_2007; @bright_delaney_2013; @bright_dynamics_2019; @duijn_2014; @duxbury_2019]. In contrast to previous research, it adopts a case study approach (vs. a simulation one), goes beyond descriptive networks statistics, and focuses on the impact of key player targeting (vs. seize-but-do-not-arrest strategy). By focusing on how law enforcement control shapes criminal network structure and activity, this study contributes to our understanding of the adaptive capacities of criminal networks and, more generally, of the impact of law enforcement interventions in drug markets.
+
+### Data and methods
+
+Empirical analyses of the impact of targeting of key players on the structure, activities, and communication strategies of criminal networks require longitudinal data to observe co-offending patterns both before and after the intervention. Accessing data of this kind can be challenging given that law enforcement agencies rarely gather relevant information after a key actor is removed from the network [@morselli_2009; @duxbury_2019]. The current study focuses on Operation Cicala, a two-year investigation of a criminal network trafficking drugs from Colombia and Morocco to Italy via Spain. The unique nature of the investigation—which saw a key player being arrested mid-investigation, but police monitoring continuing for another year—allows to compare the network before and after targeting, unlike previous research on criminal network dynamics.
+
+While the context of law enforcement control is peculiar to this investigation, the type of data used is common to other analyses of criminal networks [@bright_sna_2021]. The data for the study were extracted from criminal justice records, more specifically, from the request for remanding the suspects in custody. The document was drafted by the state prosecutor at the end of the investigation, and includes relevant evidence against the suspects which was gathered via an extensive use of electronic surveillance, as well as more traditional methods such as covert observation. It contains not only relational data on criminal collaborations, but also information on other types of ties (e.g., kinship and formal organisational ties) and on the persons involved (e.g., their role in the network). The transcripts of wiretapped telephone conversations provide rich information on the suspects’ interactions with other network members, their illegal activities, and any protection methods against law enforcement surveillance.
+
+All coding was done manually given the informal style of conversation and the frequent use of jargon [@campana_2013]. Relational data comprise criminal cooperation—which derives from both telephone and face-to-face conversations between any two suspects—, kinship ties, and formal organisational ties—which are based on the suspects’ affiliation to the ‘Ndrangheta as well as other ethnic criminal organisations [@campana_2011; @malm_2010].^[The 'Ndrangheta is a mafia-type criminal organisation of Calabrian origin, with ramifications in other Italian regions and abroad. A brief but informative introduction to the 'Ndrangheta and its involvement in drug trafficking can be found in Calderoni (2012).] Attribute data include details on the suspects’ nationality, affiliation to the ‘Ndrangheta, main task, role in the drug supply chain, and status [@calderoni_2012; @wood_2017]. Tasks are based on previous research on drug trafficking, and consider the main activity each individual was involved in (e.g., trafficker, support, courier) [@calderoni_2012]. Roles instead represent the position of each individual in the drug supply chain—supply, importation, or distribution. Both were often immediately apparent from the wiretapped conversations in the criminal justice records and, following Bright and Delaney’s [-@bright_delaney_2013] example, were kept separate. The actors’ status was identified based on their formal role within the criminal organisation, and their tendency to give or receive orders in the wiretapped communications reported in the criminal justice records. A dummy variable was also created to identify whether network members were targeted by the Italian law enforcement agencies during the investigation, as it may affect individual connectivity.
+
+The criminal collaboration network is the main focus of the analyses. Three binary, undirected matrices were created for each investigative phase. A combination of ‘event-based’ split and ‘time-based’ split was used to identify the three phases [@bright_delaney_2013]. The first investigative phase starts in November 2008 and ends in June 2009, when N3—a key player in the trafficking network—was arrested. Given the length of the investigation after N3’s arrest, two more phases were identified after June 2009. They both last 197 days (against the 217 days of the first one), and the third one ends in July 2010, together with the end of the investigation. The two investigative phases after N3’s arrest allow to assess its short- and long-term impact, as well as consider the network’s recovery time [@duxbury_2019]. Each network has its own set of attributes to account for changes in the actors’ task and role over time [@bright_delaney_2013]. Separate kinship and formal organisation networks were also created for each phase. Table 1 includes descriptive statistics for the criminal collaboration network in each phase, and the suspects’ main attributes.
+
+```{r descriptive statistics, include = FALSE}
+
+# create empty matrix
+stats <- matrix(ncol = 3, nrow = 28, # matrix has 3 columns and 28 rows
+                dimnames = list(c("Network size", "Edge count", "Density", "Mean degree", # add row names
+                                  "Maximum degree", "Degree centralisation", "Clustering coefficient", 
+                                  "Nationality", "Italian", "Moroccan", "Romanian", "Other/unknown",
+                                  "Task", "Supplier", "Trafficker", "Courier", "Buyer", "Support", "Unknown", 
+                                  "Role in the drug supply chain", "Supply", "Importation", "Distribution", "Unknown",
+                                  "Status", "High", "Medium", "Low"), 
+                                c("Phase 1", "Phase 2", "Phase 3"))) # add column names
+
+# calculate descriptive statistics, and store them in the matrix
+for (i in 1:3){
+  stats[, i] <- c(network.size(net_list[[i]]), # network size
+                  network.edgecount(net_list[[i]]), # network edge count
+                  round(gden(net_list[[i]]), 2), # density
+                  round(mean(degree(net_list[[i]], gmode = "graph")),2), # mean degree
+                  max(degree(net_list[[i]], gmode = "graph")), # max. degree
+                  round(centralization(net_list[[i]], degree, mode = "graph", normalize = TRUE), 2), # degree centralization
+                  round(gtrans(net_list[[i]], mode = "graph", measure = "weak"), 2), # clustering coefficient
+                  "",
+                  sum(att_list[[i]]$nationality == "Italian"), # actors' nationality
+                  sum(att_list[[i]]$nationality == "Moroccan"),
+                  sum(att_list[[i]]$nationality == "Romanian"),
+                  sum(att_list[[i]]$nationality == "Colombian" | att_list[[i]]$nationality == "Spanish" | att_list[[i]]$nationality == "Unknown"),
+                  "",
+                  sum(att_list[[i]]$task == "Supplier"), # actors' task
+                  sum(att_list[[i]]$task == "Trafficker"),
+                  sum(att_list[[i]]$task == "Courier"),
+                  sum(att_list[[i]]$task == "Buyer"),
+                  sum(att_list[[i]]$task == "Support"),
+                  sum(att_list[[i]]$task == "Unknown"),
+                  "",
+                  sum(att_list[[i]]$role == "Supply"), # actors' role in the drug supply chain
+                  sum(att_list[[i]]$role == "Importation"),
+                  sum(att_list[[i]]$role == "Distribution"),
+                  sum(att_list[[i]]$role == "Unknown/Peripheral involvement"),
+                  "",
+                  sum(att_list[[i]]$status == "High"), # actors' status
+                  sum(att_list[[i]]$status == "Medium"),
+                  sum(att_list[[i]]$status == "Low"))
+}
+
+```
+
+```{r table 1, echo = FALSE}
+
+# print table
+kable(stats, # use descriptive statistics calculated above
+      caption = "Table 1. Descriptive statistics", # include table title
+      align = c(rep("c", times= 3))) %>% # center align for all three columns
+  row_spec(row = c(8, 13, 20, 25), italic = TRUE) %>% # set italics for some rows
+  add_indent(positions = c(9:12, 14:19, 21:24, 26:28), level_of_indent = 1) %>% # indent some other rows
+  kable_styling(full_width = TRUE, font_size = 14) # set width of table and font size
+
+```
+
+The analysis combines a quantitative element where Exponential Random Graph Models (ERGMs) are used to identify the main drivers of criminal collaboration in each investigative phase, and a qualitative element where the content of the wiretapped conversations is analysed to make sense of the quantitative results, and add to our understanding of network structure and processes [@vargas_2014; @morselli_2009]. The content analysis helps assess levels of criminal activity in the aftermath of law enforcement targeting, the actors’ perception of risk, and any changes in communication strategies and protection methods against law enforcement surveillance [@duxbury_2019].
+
+&nbsp;
+
+```{r network visualisation, include = FALSE}
+
+# list all nodes' IDs (n = 128)
+ids_all <- sort(unique(c(network.vertex.names(net_list[[1]]), network.vertex.names(net_list[[2]]), network.vertex.names(net_list[[3]])))) 
+
+# create empty networks with isolates (n = 128)
+net_all_list <- list(network.initialize(length(ids_all)), network.initialize(length(ids_all)), network.initialize(length(ids_all))) # initialize a network with all nodes (n = 128)
+
+# assign names to nodes and values to edges
+for (i in 1:3){
+  network.vertex.names(net_all_list[[i]]) <- ids_all # assign names to nodes
+  net_all_list[[i]][as.matrix(mat_list[[i]][, 1:2])] <- 1
+}
+
+# create network with all nodes (n = 128)
+net_all <- network.initialize(length(ids_all)) # initialize a network with all nodes (n = 128)
+network.vertex.names(net_all) <- ids_all # assign names to nodes
+net_all[as.matrix(mat_list[[1]][, 1:2])] <- 1 # assign values to edges in network
+net_all[as.matrix(mat_list[[2]][, 1:2])] <- 1
+net_all[as.matrix(mat_list[[3]][, 1:2])] <- 1
+
+# save coordinates for all nodes
+coords_all <- gplot(net_all, usearrows = FALSE)
+
+# set color palette
+pal <- wes_palette("Royal1", 4, type = "discrete") 
+
+# use different color for N3
+vect_ids <- rep(FALSE, times = length(network.vertex.names(net_all))) # create attribute vector
+lab_ids <- rep("", times = length(network.vertex.names(net_all))) # create label vector
+for (i in 3) {
+  vect_ids[i] <- TRUE # make N3' attribute TRUE
+  lab_ids[i] <- network.vertex.names(net_all)[i] # add labels
+}
+
+# set node colors
+netcolours <- ifelse(vect_ids == TRUE, pal[2], pal[1]) # red for N3, grey for all other nodes
+
+```
+
+```{r figure 1, echo = FALSE, out.width = "33%"}
+
+# print graphs
+gplot(net_all_list[[1]], # plot network at time 1
+      usearrows = FALSE, # don't use arrow heads
+      label = lab_ids, # use label only for N3
+      displayisolates = FALSE, # don't display isolates
+      usecurve = TRUE, # edges are slightly curved
+      edge.curve = .01, 
+      vertex.col = netcolours, # color N3 in red, other nodes in grey
+      vertex.cex = 2, # set nodes' size
+      label.cex = 2, # set labels' size
+      edge.lwd = 1, # set edge width
+      edge.col = pal[1], # use grey edges
+      coord = coords_all, # use same coordinates for all three networks
+      main = "Phase 1", # include figure title
+      cex.main = 2.5) # set title's size
+
+gplot(net_all_list[[2]], usearrows = FALSE, label = lab_ids, displayisolates = FALSE, # repeat for network at time 2
+      usecurve = TRUE, edge.curve = .01, vertex.col = netcolours, vertex.cex = 2, label.cex = 2, 
+      edge.lwd = 1, edge.col = pal[1], coord = coords_all, main = "Phase 2", cex.main = 2.5)
+
+gplot(net_all_list[[3]], usearrows = FALSE, label = lab_ids, displayisolates = FALSE, # and then again for network at time 3
+      usecurve = TRUE, edge.curve = .01, vertex.col = netcolours, vertex.cex = 2, label.cex = 2, 
+      edge.lwd = 1, edge.col = pal[1], coord = coords_all, main = "Phase 3", cex.main = 2.5)
+
+```
+
+<span style="color:darkgrey">Figure 1. Criminal collaboration networks across investigative phases.^[Recurring nodes maintain the same coordinates across networks, N3's position is highlighted in red in the first investigative phase.]</span>
+
+&nbsp;
+
+```{r changes across phases, include = FALSE}
+
+# create empty matrix
+overlap <- matrix(ncol = 2, nrow = 11, # matrix has 2 columns and 11 rows
+                  dimnames = list(c("No. observed actors", "Actors at t", "Actors at t + 1", # add row names
+                                    "Size difference", "Joint", "Combined", "Jaccard index",
+                                    "No. observed ties", "Ties at t", "Ties at t + 1", "Jaccard index"),
+                                  c("Phase 1 to 2", "Phase 2 to 3"))) # add column names
+
+# combine edgelists and identify edges in each of the three networks
+mat_all <- bind_rows(mat_list[[1]], mat_list[[2]], mat_list[[3]]) %>% # combine the three edgelists
+  distinct(V1, V2, .keep_all = TRUE) %>% # remove duplicates based on first and second column
+  select(-3) %>% # remove third column
+  left_join(mat_list[[1]], by = c("V1", "V2")) %>% # create new dummy variable where 1 == edge is present in network at time 1
+  left_join(mat_list[[2]], by = c("V1", "V2")) %>%
+  left_join(mat_list[[3]], by = c("V1", "V2")) %>%
+  rename(time1 = V3.x, time2 = V3.y, time3 = V3) %>% # rename new columns
+  replace_na(list(time1 = 0, time2 = 0, time3 = 0)) # replace NAs with zeros
+
+# calculate change statistics
+for (i in 1:2){
+  joint_nodes <- length(intersect(network.vertex.names(net_list[[i]]), network.vertex.names(net_list[[i+1]]))) # no. nodes shared by two networks
+  combined_nodes <- length(union(network.vertex.names(net_list[[i]]), network.vertex.names(net_list[[i+1]]))) # total no. nodes in both networks (shared and not shared)
+  joint_edges <- dim(filter(mat_all, mat_all[,i+2] == 1 & mat_all[,i+3] == 1))[1] # no. edges shared by two networks
+  combined_edges <- dim(filter(mat_all, mat_all[,i+2] == 1 | mat_all[,i+3] == 1))[1] # total no. edges in both networks (shared and not shared)
+  overlap[, i] <- c("", network.size(net_list[[i]]), network.size(net_list[[i+1]]), # size of each networks
+                  network.size(net_list[[i+1]]) - network.size(net_list[[i]]), # size difference
+                  joint_nodes, combined_nodes, # from above - nodes shared by / in both networks
+                  round(joint_nodes / combined_nodes * 100, 1), # jaccard index for node overlap
+                  "", sum(mat_all[,i+2]), sum(mat_all[,i+3]), # no. edges in each networks
+                  round(joint_edges / combined_edges * 100, 1)) # jaccard index for edge overlap
+}
+  
+```
+
+```{r table 2, echo = FALSE}
+
+# print table
+kable(overlap, # use change statistics calculated above
+      caption = "Table 2. Changes across investigative phases", # include table title
+      align = c(rep("c", times= 2))) %>% # center align both columns
+  row_spec(row = c(1, 8), italic = TRUE) %>% # set italics for some rows
+  add_indent(positions = c(2:7, 9:11), level_of_indent = 1) %>% # indent some other rows
+  kable_styling(full_width = FALSE, font_size = 14) # set width of table and font size
+
+```
+
+Figure 1 shows the criminal collaboration network in each investigative phase, while Table 2 identifies changes in observed actors and ties across phases. Temporal models for social networks such as Stochastic Actor-Oriented Models (SAOMs) and Temporal Exponential Random Graph Models (TERGMs) require relative stability of actors across phases, which is not present in the Cicala network. Following the approach taken in prior studies, this paper therefore uses separate ERGMs at each investigative stage [@ouellet_2017; @gill_2014]. ERGMs are a class of statistical models that assess the probability of a tie between two network actors based on node-level attributes (e.g., status), dyad-level attributes (e.g., homophily by task), and network properties (e.g., triad closure) [@lusher_2013; @robins_2007]. Each ERGM allows to identify the processes that, in each investigative phase, led to tie formation, and whether network members favoured security over efficiency, or vice versa (or a combination of the two). While the ERGMs are not able to explain change in network structure over time, differences across phases may suggest the network adapted after law enforcement intervention.
+
+Table 3 lists the set of parameters included in the models, their statnet name, and their interpretation. In addition to these, two controls were added to account for law enforcement targeting and homophily by nationality [@baker_1993; @campana_2013]. The network analyses were performed using the statnet suite of packages for R [@handcock_ergm_2021; @butts_sna_2020; @r_2021]. For all dyad dependence models, the maximum likelihood was approximated using Markov Chain Monte Carlo simulation methods [@hunter_ergm_2008]. The goodness of fit was assessed by comparing the observed networks with simulated ones, and goodness-of-fit plots are reported in the Appendix [@hunter_gof_2008]. For a more detailed discussion of ERGM network statistics and their relation to the security-efficiency trade-off, please see Malm et al.’s [-@malm_2010] and Bright et al.’s [-@bright_dynamics_2019] work [see also @mcmillan_2020].
+
+```{r table 3, echo = FALSE}
+
+# create data frame by combining three columns
+para <- cbind(c("Edge", "Preferential attachment", "Activity spread for high status actors, 'Ndrangheta members, and traffickers", "Homophily by task and role", "Multiplexity of ties (kinship and formal organisation)", "Indirect connections", "Triadic closure"),
+              c("edges", "gwdeg", "nodefactor", "nodematch", "edgecov", "gwdsp", "gwesp"),
+              c("Baseline probability for tie formation. Negative for sparse networks (security)", "Negative for decentralised networks (security); positive for centralised networks (efficiency)", "Positive when high status actors, 'Ndrangheta members, and traffickers are directly involved in day-to-day operations (efficiency)", "Negative when actors tend to collaborate more with those with different tasks or in different roles (efficiency)", "Positive when actors tend to collaborate based on pre-existing relations to reduce uncertainty and increase trust (security)", "Positive for networks with chain-like patterns of connection (security); negative for networks with short geodesic distances (efficiency)", "Positive when actors tend to collaborate in dense, local groups (efficiency), but also when collaboration is based on kinship and/or shared criminal affiliation (security)"))
+
+# print table
+kable(para, # use the table created above
+      caption = "Table 3. ERGM parameters", # include table title
+      col.names = c("Parameter", "statnet name", "Interpretation")) %>% # add column names
+  kable_styling(full_width = TRUE, font_size = 14) %>% # set width of table and font size
+  add_footnote("Note: Adaptation of Lusher, Koskinen, and Robins' <i>Exponential Random Graph Models for Social Networks: Theory, Methods, and Applications</i>, p. 175.", notation = "none", escape = FALSE) # add footnote below the table
+
+```
+
+### Results
+
+Between November 2008 and June 2009, the criminal network organised nine consignments of cocaine (ranging between 5.2-14.6 kilos), and one consignment of hashish (225 kilos). The drugs were purchased in Spain from suppliers who had contacts with Colombian producers (for cocaine) and Moroccan traffickers (for hashish). The drugs were often hidden in the trucks of N3’s transport company, and smuggled to Italy by one of his couriers together with licit goods. New arrangements continued despite half of the consignments were seized by the Italian law enforcement agencies, suggesting that the group was fairly resilient to drug seizures, and managed to involve new buyers that would finance the purchase of drug in exchange for a share.
+
+When N3 was arrested in June 2009, he had the highest degree centrality score in the network, which was a consequence of his many direct contacts with suppliers in Spain—including a small group of Romanian citizens—and with the employers of his transport company, many of whom were also members of the criminal group. The company was used as a front for the smuggling activities, and the drug was often hidden in trucks to cross the border. N3 also had the highest betweenness centrality score, and acted as a broker between several other network members, such as the suppliers based in Spain, and the wholesale dealers in Italy. The criminal network thus relied on N3, as well as a few other traffickers, to purchase the drug in Spain, and transport it to Italy.
+
+```{r centrality, include = FALSE}
+
+# check N3's degree centrality score
+ord_by_deg <- order(degree(net_list[[1]], gmode = "graph"), decreasing = TRUE) # order nodes at time 1 by degree centrality
+cbind(network.vertex.names(net_list[[1]]), degree(net_list[[1]], gmode = "graph")) [ord_by_deg, ] # print node labels and degree scores
+
+# repeat for betweenness centrality
+ord_by_bet <- order(betweenness(net_list[[1]], gmode = "graph"), decreasing = TRUE) # order nodes at time 1 by betweenness centrality
+cbind(network.vertex.names(net_list[[1]]), betweenness(net_list[[1]], gmode = "graph")) [ord_by_bet, ]
+
+```
+
+With his high degree and betweenness centrality scores, N3 fits the definition of key player found in the literature on criminal network vulnerabilities. His arrest, however, was not the consequence of a well-thought law enforcement strategy, but rather the result of miscommunication between police forces. In the months approaching his arrest, N3 had been under surveillance by both the Anti-mafia District Directorate of Reggio Calabria—who ran Operation Cicala—and the Anti-mafia District Directorate of Trento. In June 2009, the latter decided to wrap up the evidence and formulate the request for remanding the suspects in custody, including N3. Meanwhile, Operation Cicala was carried on, allowing law enforcement agencies to continue monitoring all remaining suspects and collecting evidence (and network data) for another year.
+
+The descriptive statistics of the criminal collaboration network in Table 1 show some of the changes in network structure after N3’s arrest. Both the overall network density and the actors’ mean degree dropped in the second investigative phase (from `r stats[3, 1]` to `r stats[3, 2]`, and from `r stats[4, 1]` to `r stats[4, 2]`, respectively), and only slightly increased towards the end of the investigation. Degree centralisation and the clustering coefficient also decreased after the first investigative phase. After law enforcement intervention, the network became sparser and more decentralised, with fewer dense, local groups, suggesting a stronger focus on security over efficiency. The ERGMs for each investigative phase in Table 4 offer a better understanding of the drivers of criminal collaboration before and after law enforcement intervention. The interpretation of the parameters is similar to logistic regression coefficients. Positive parameters indicate that the probability of a tie increases if the new tie increases the corresponding network statistic, conditional on the rest of the network [@ouellet_2017].
+
+```{r ergm, include = FALSE}
+
+# read in kinship data, and store them in a list
+mat_kin_list <- list(read.csv("data/kinship-1.csv", header = FALSE, sep = ","), read.csv("data/kinship-2.csv", header = FALSE, sep = ","), read.csv("data/kinship-3.csv", header = FALSE, sep = ","))
+
+# create empty network objects
+kin_list <- list(network.initialize(network.size(net_list[[1]]), directed = FALSE), network.initialize(network.size(net_list[[2]]), directed = FALSE), network.initialize(network.size(net_list[[3]]), directed = FALSE)) # initialize network with right no. nodes
+
+# add names to nodes and values to edges to get kinship networks
+for (i in 1:3){
+  network.vertex.names(kin_list[[i]]) <- as.vector(att_list[[i]]$id) # assign names to nodes
+  kin_list[[i]][as.matrix(mat_kin_list[[i]][, 1:2])] <- 1 # add in edges from the edgelist to the network object
+}
+
+# read in affiliation data, and store them in a list
+mat_clan_list <- list(read.csv("data/clan-1.csv", header = FALSE, sep = ","), read.csv("data/clan-2.csv", header = FALSE, sep = ","), read.csv("data/clan-3.csv", header = FALSE, sep = ","))
+
+# create empty network objects
+clan_list <- list(network.initialize(network.size(net_list[[1]]), directed = FALSE), network.initialize(network.size(net_list[[2]]), directed = FALSE), network.initialize(network.size(net_list[[3]]), directed = FALSE)) # initialize network with right no. nodes
+
+# add names to nodes and values to edges to get affiliation networks
+for (i in 1:3){
+  network.vertex.names(clan_list[[i]]) <- as.vector(att_list[[i]]$id) # assign names to nodes
+  clan_list[[i]][as.matrix(mat_clan_list[[i]][, 1:2])] <- 1 # add in edges from the edgelist to the network object
+}
+
+# set seed
+set.seed(8)
+
+# check data
+ls()
+
+# check node attributes' names
+list.vertex.attributes(net_list[[1]])
+
+# check node attributes' categories
+table(net_list[[1]]%v%"role") # [1] Distribution, [2] Importation, [3] Supply, [4] Unknown/Peripheral involvement
+table(net_list[[1]]%v%"task") # [1] Buyer, [2] Courier, [3] Supplier, [4] Support, [5] Trafficker, [6] Unknown
+table(net_list[[1]]%v%"status") # [1] High, [2] Low, [3] Medium
+table(net_list[[1]]%v%"affiliation.2") # [1] Moroccan clan, [2] Ndrangheta, [3] No affiliation, [4], Romanian clan
+table(net_list[[1]]%v%"nationality") # [1] Italian, [2] Moroccan, [3] Romanian, [4] Spanish, [5] Unknown
+table(net_list[[1]]%v%"targeted") # [1] 0 (No), [2] 1 (Yes)
+
+# check homophily
+summary(net_list[[1]] ~ nodematch("task"))
+summary(net_list[[1]] ~ nodematch("role"))
+
+# run ergms of the three networks
+fit_list <- list() # create empty list
+alpha_list <- c(0.05, 0.05, 0.15)
+
+# estimate models...
+# for (i in 1:3){
+#   fit_list[[i]] <- ergm(net_list[[i]] ~ edges
+#                         + nodefactor("status", levels = -(2:3)) # individual attribute: high status
+#                         + nodefactor("affiliation.2", levels = 2) # individual attribute: 'Ndrangheta member
+#                         + nodefactor("task", levels = 5) # individual attribute: trafficker
+#                         
+#                         + nodematch("task") # uniform homophily: task
+#                         + nodematch("role") # uniform homophily: role
+#                         
+#                         + edgecov(kin_list[[i]]) # multiplexity: kinship ties
+#                         + edgecov(clan_list[[i]]) # multiplexity: shared criminal affiliation
+#                         
+#                         + gwdegree(0.25, fixed = TRUE) # preferential attachment
+#                         + gwesp(alpha_list[[i]], fixed = TRUE) # triadic closure
+#                         + gwdsp(alpha_list[[i]], fixed = TRUE) # indirect ties
+#                         
+#                         + nodematch("nationality") # uniform homophily: nationality
+#                         + nodefactor("targeted") # individual attribute: targeted
+#                         
+#                         , control = control.ergm(MCMC.samplesize = 4096, MCMC.interval = 8192)
+#                         , verbose = TRUE
+#                         )
+#   print(summary(fit_list[[i]]))
+# }
+
+# ...or upload estimates if models take too long
+load("output/ergm_estimates.RData")
+
+# assess model convergence of the three models
+# for (i in 1:3){
+#   pdf(paste("diag-", i, ".pdf", sep = ""))
+#   mcmc.diagnostics(fit_list[[i]])
+#   dev.off()
+# }
+
+```
+
+```{r table 4, echo = FALSE}
+
+# convert ergm outputs to table
+models <- modelsummary(fit_list, # ergms of the three networks
+             fmt = 2, # round to two digits
+             estimate = "{estimate} ({std.error}){stars}", statistic = NULL, # display everything in one row
+             gof_omit = ".*", # omit goodness of fit
+             coef_map = c("edges" = "Edges", # reorder, group, and rename coefficients
+                          "nodefactor.status.High" = "Activity spread (high status)",
+                          "nodefactor.task.Trafficker" = "Activity spread (trafficker)",
+                          "nodefactor.affiliation.2.Ndrangheta" = "Activity spread ('Ndrangheta member)",
+                          "nodematch.task" = "Homophily by task",
+                          "nodematch.role" = "Homophily by role",
+                          "edgecov.kin._list[[i]]" = "Multiplex ties (kinship)",
+                          "edgecov.clan_list[[i]]" = "Multiplex ties (formal org.)",
+                          "gwdeg.fixed.0.25" = "Preferential attachment",
+                          "gwesp.fixed.0.05" = "Triadic closure",
+                          "gwesp.fixed.0.15" = "Triadic closure",
+                          "gwdsp.fixed.0.05" = "Indirect connections",
+                          "gwdsp.fixed.0.15" = "Indirect connections",
+                          "nodematch.nationality" = "Homophily by nationality",
+                          "nodefactor.targeted.1" = "Activity spread (targeted)"),
+             output = "data.frame" # specify output
+             )
+
+# print table
+models %>% # use models simulated above
+  dplyr::select(-c(part, statistic)) %>% # remove columns from data frame
+  kable(caption = "Table 4. Estimates and standard errors from ERGMs", # include table title
+        col.names = c(" ", "Model 1", "Model 2", "Model 3"), # add column names
+        align = c("l", rep("c", 3))) %>% # center align last three columns
+  kable_styling(full_width = TRUE, font_size = 14) %>% # set width of table and font size)
+  add_footnote("*** p < 0.001; ** p < 0.01; * p < 0.05.", notation = "none", escape = FALSE) # add footnote below the table
+
+```
+
+Before N3’s arrest, actors with high status were more likely to form direct ties than those with medium or low status, suggesting an involvement in day-to-day operations rather than a tendency to delegate. The parameter for homophily by role is also positive and significant, indicating that two actors who have the same role in the drug supply chain are more likely to share a tie than any other pair of actors with different roles. In the second investigative phase, the two parameters are no longer statistically significant. This may suggest that high-status actors limited their direct involvement in trafficking operations and were as likely to form ties as other co-offenders, and that network members reduced their collaboration with those at the same stage of the supply chain, thus reducing the efficiency of the network. The activity spread parameter for high-status actors regains statistical significance in the third and final investigative phase, suggesting an attempt of high-status individuals to bounce back to pre-disruption activity levels.
+
+The parameter for indirect connections is not significant before N3’s arrest. In contrast, chain-like patterns of connection are likely to exist in the third investigative phase, hinting at an increased focus on security after law enforcement intervention. Taken together, these findings suggest a preference for security over efficiency after N3’s arrest, with high-status actors avoiding direct involvement in day-to-day operations in the shorter term, and network members favouring longer communication chains in the longer term. N2—a trafficker belonging to the same ‘Ndrangheta family as N3—provides a good example of this behaviour in the phases after law enforcement intervention. Instead of communicating directly with some of the buyers based in Calabria, he sent and received messages via N1, who was also in Calabria and thus able to arrange meetings with them.
+
+Other ERGM parameters are relevant to understand criminal collaboration patterns both before and after N3’s arrest. Sharing kinship ties or formal organisational ties was associated with criminal collaboration in all three investigative phases, suggesting that network members resorted to pre-existing relations to reduce uncertainty and increase trust. For example, in the first investigative phase, N3’s wife and two sons were actively involved in the group’s illicit activities. Kinship ties were also valued among the members of the Moroccan and the Romanian clans, reflecting the importance of trusted relations in criminal contexts and beyond mafia-type organisations. Another similarity across investigative phases is the positive parameter for preferential attachment, which indicates that highly connected actors are more likely to form new ties than peripheral ones. Highly connected actors, however, seem to have changed over time, with traffickers being particularly active in the second investigative phase, and ‘Ndrangheta members being exceptionally careful in the final stages of the investigation, as suggested by the negative and statistically significant parameter for activity spread.
+
+This tendency towards centralisation is paired with a tendency to triadic closure across all investigative phases. Transitivity can lead to highly cohesive networks characterised by quick information sharing and thus efficiency, but can equally foster security by ensuring incriminating or sensitive information does not spread too far in the network. Assortative mixing (i.e., the interaction with similar others) can induce transitivity, since a tie is more likely to form when two actors not only share an indirect tie, but also the same attribute [@goodreau_2009]. In the criminal network under investigation, kinship and formal organisational ties likely contribute to the observed tendency to triadic closure. As noted earlier, these types of ties are particularly relevant for criminal collaboration, because they build trust among network members and maintain some level of security while simultaneously favouring efficiency.
+
+Changes in network structure after N3’s arrest suggest an increased focus on security by reducing the direct involvement of high-status actors in the aftermath of law enforcement intervention and, in the longer term, by lengthening the distance between any two actors through indirect connections. Despite a reduction in centralisation and clustering scores after the first investigative phase, the network maintained a tendency towards them, while often basing criminal collaboration on pre-existing kinship or formal organisational ties. The observed changes in network structure may be a consequence of a heightened perception of risk after N3’s arrest, which may have contributed to network members modifying their communication strategies and altering their security measures. They might have also been affected by the broader context of law enforcement control. In addition to N3’s arrest, throughout the investigation network members suffered from a series of drug seizures which imposed losses on the criminal network. This led to the creation of subsequent importations to compensate from previous losses, and to the involvement of new buyers to finance these new importations.
+
+The observed changes in network structure may also be, at least partly, a consequence of the data collection strategy and boundary specification criteria. ERGMs assume that network data are complete—which is unlikely to be the case in the context of illicit networks drawn from criminal justice records—and are particularly sensitive to missing data in relatively small networks [@bright_sna_2021]. We also do not have any information about the ‘master network’, that is, the pool of potential co-offenders from which new members are recruited [@morselli_2009].  This is particularly relevant in light of the high turnover between investigative phases observed in the Cicala network, and results in little information on the way in which criminal opportunities arise and new collaborations are formed. With this in mind, the qualitative element of the analyses helps provide some context for the changes observed in the network structure.
+
+The content analysis of wiretapped telephone conversations suggests that criminal network members were aware of the risk of law enforcement control since the beginning of the investigation in November 2008. N3 himself told another member of the group that *‘these phones are tapped… I tell you’*.^[All excerpts from criminal justice records are the author's translation from Italian.] Network members therefore used a series of protective measures against surveillance even before N3’s arrest. Most protection methods were specifically intended to counter electronic surveillance and prevent law enforcement agencies from obtaining evidence. While some measures were constantly used by network members, others were adopted after specific events, such as the seizure of a drug consignment or the discovery of bugs in their houses or cars. Changing SIM cards or avoiding telephone communications for a limited period of time was a common measure, as evidenced by the following conversation between N2 and N65 in the aftermath of discovering a bug:
+
+<ul><font size="2.75">*N65: I’m going to throw this thing [phone] away… I was waiting for you to call, and now I can throw it away.*</font></ul>
+ 
+<ul><font size="2.75">*N2: I’m going to throw everything away, too.*</font></ul>
+ 
+The replacement of SIM cards or mobile phones used to communicate with other network members was relatively frequent. The majority of wiretapped telephone lines were used by a small group of 38 actors who frequently changed their SIM cards to avoid law enforcement surveillance. Before his arrest, N3 was particularly careful in his use of mobile phones, and at times scolded his co-offenders for not paying enough attention (*‘if you bought two new phones to talk… and we don’t use them… why did you spend money on them?’*). The transcripts of wiretapped conversations include a few mentions of alternative communication devices that the police are unable to wiretap, such as Skype and Msn, and of public phones. However, evidence of their use is limited, and the actors who adopted these solutions continued to discuss illegal activities on the telephone, too.
+
+The use of code words was one of the main protective measures adopted by network members since the beginning of the investigation. Co-offenders often used nicknames or ‘network-based paraphrases’ (i.e., paraphrases that represent a feature of the person or kin relations, and that only affiliates can understand) to refer to each other [@gambetta_2009]. For example, N6 was ‘the blond girl’, and N29 was ‘the giant’. Code words were also used to discuss illegal activities without openly mentioning them. For example, N5 said that he *‘spent the night with a blond woman [drug], but it was not good [poor quality]’*. On another occasion, N10 complained that *‘the fish from last time is gone bad’*, that is, the drug was not of good quality. Code words, however, were not necessarily enough to prevent law enforcement agencies from building a case against many network members, especially when their use was inconsistent:
+
+<ul><font size="2.75">*N65: The shoes [drug] are not good quality ones… quality is only 70%.*</font></ul>
+
+While neither protective measures nor the content of telephone conversations changed after law enforcement intervention, the number of calls dropped since May 2009, possibly reflecting a stronger focus on security by network members. After N3’s arrest, the number of drug consignments also decreased. In the second investigative phase, the traffickers managed to organise and complete only one importation of 6.8 kilos of cocaine. In March 2010, 12 kilos of cocaine were smuggled to Italy, followed by another importation of cocaine in May, and the importation of 61 kilos of hashish in June, which were seized by law enforcement. The constant increase in the number of wiretapped telephone lines throughout the investigation, and the fact that only in rare occasions network members discussed telephone conversations that had not already been intercepted, may indicate that the investigators were able to identify most new members recruited after law enforcement intervention. However, the opposite conclusion—that is, new network members and trafficking activities remained outside of the investigation’s scope—cannot be completely ruled out.
+
+Law enforcement targeting seems to have impacted on both the internal structure and the trafficking activities of the Cicala network. After N3’s arrest, network members seemed to favour security over efficiency, although criminal collaboration continued. While the remaining network members lost both their contacts with the group of Romanian suppliers, and the possibility to use N3’s transport company to smuggle drugs to Italy, they managed to keep contacts with the suppliers in Spain, and to adapt their *modus operandi* by smuggling the drug by car. The three drug consignments organised in early 2010 suggest that, after a period of reorganisation, the network adapted and maintained, at least in part, its operational activity before being eventually dismantled by law enforcement following the arrest of most of its members in July 2010.
+
+### Discussion
+
+As Morselli notes, ‘criminal networks are not simply social networks operating in criminal contexts’ [@morselli_2009, p. 8]. Maximising security and minimising exposure to law enforcement is fundamental to their survival. It is therefore not surprising that, in the aftermath of law enforcement intervention, network members showed a greater tendency to maximise security over efficiency than before N3’s arrest. While the separate ERGMs for each investigative phase could not explain change in network structure over time, they helped identify a reduction in high-status actors’ direct involvement in illicit activities immediately after the arrest of one of the key players, and a preference for indirect ties in the final stage of the investigation [@bright_dynamics_2019].
+
+Kinship was confirmed as the ‘hidden glue’ maintaining collaboration in criminal contexts [@malm_2010, p. 69]. These findings speak to a long and well-established body of knowledge on the importance of familial ties as the foundation of various criminal enterprises [@paoli_2003; @antonopolous_2006; @zhang_2007]. The overlap between kinship and co-offending ties (and formal organisational ties) may have contributed to the adaptive capacities of the Cicala network. Multiplexity and, more specifically, the overlap between personal and criminal connections, has indeed been identified as a source of network resilience [@morselli_law-enforcement_2007; @malm_2010]. In a context where reciprocal distrust and recourse to violence are common, social relations—including, but not restricted to, kinship ties—contribute to increasing the levels of trust and favour criminal cooperation [@kleemans_1999; @paoli_2008; @van_de_bunt_2014; @von_lampe_2004; @gambetta_1988].
+
+In line with previous empirical research, the network favoured efficiency in the first investigative phase, when law enforcement risk was lower, and later decentralised under the pressure of police targeting [@morselli_law-enforcement_2007; @ouellet_2017]. For example, terrorist networks have been found to increase density and cohesion as they approach the attack stage and need to coordinate the attack [@helfstein_2011; @mcmillan_2020]. These findings, however, are in contrast with Duijn et al.’s [-@duijn_2014] simulation results, which predicted a greater focus on efficiency after law enforcement intervention. They also describe dynamics that are opposite to those of Bright and Delaney’s [-@bright_delaney_2013] network, which was under continual surveillance but never directly targeted, and over time moved away from a focus on security to prioritise efficiency and increase its profits.
+
+These differences could reflect variations in opportunity structures, including those deriving from the ‘master network’ in which the smaller, observed network is embedded in. The Cicala network took time to recover after targeting, suggesting that previous simulations may not have been able to take into account the range of constraints to recruit new members and adapt to increased law enforcement risk [@duxbury_2019; @duijn_2014]. For example, they may have downplayed issues of trust that arise when recruiting from the larger pool of available criminals rather than the smaller network of trusted associates [@gambetta_2009; @bright_adaptation_2017]. Furthermore, simulations may not have been able to take into account the full complexity of recovery and adaptation processes, which in the case of the Cicala network entailed the recruitment of new members with specific resources, a change in the modus operandi to smuggle drug from Spain to Italy, and the introduction of new distribution chains [@williams_2001; @morselli_law-enforcement_2007; @bright_delaney_2013].
+
+In addition to providing a quantitative and qualitative account of the adaptive capacities of the Cicala network, this study confirms the need for more research on criminal network recovery and adaptation after law enforcement targeting. First, the data and methods used are not free from limitations, which should be addressed in future studies. Law enforcement data only provide a partial picture of the network and are affected by the criminal justice records used as the main source of information [@campana_2012; @berlusconi_2013]. This is especially problematic when ERGMs are used for modelling, because they assume that network data are complete [@malm_2010]. Accessing a wider range of data sources on the same criminal network, and adopting alternative modelling strategies that account for actors’ high turnover, would help address these issues. Analytical strategies that considered different kinds of law enforcement interventions simultaneously could also improve our understanding of network resilience. While N3’s arrest had a considerable impact on the structure and activities of the Cicala network, the economic losses resulting from drug seizures may have also contributed to the observed changes. With little information on the new network members, it also remains difficult to assess whether changes are a consequence of their individual characteristics or of drug seizures and arrests [@ouellet_2017].
+
+Second, a wider range of case studies focusing on different criminal, and drug trafficking, networks in various settings and exposed to various targeting strategies will contribute to a solid knowledge base to produce more realistic simulations. Findings from case studies are limited in their generalisability [@bright_adaptation_2017]. While the current study focused on the arrest of one key player, we know little about the impact of, e.g., the subsequent removal of critical nodes [@duijn_2014; @duxbury_2019]. An additional limitation to the generalisability of the current study may be due to the focus on the Italian ‘Ndrangheta rather than looser trafficking networks. Calderoni, however, demonstrated how its formal hierarchy does not play a role when its members are involved in drug trafficking operations [@calderoni_2012]. Finally, future studies using temporal models for social networks will allow to further test the efficiency-security trade-off framework, and assess whether it identifies the main determinants of criminal network structure [@duxbury_2019].
+
+Empirical contributions on network recovery and adaptation are not only a way to enhance our theoretical understanding of criminal networks, but also a valuable tool to inform law enforcement policy and practice. Sparrow’s rationale for the analysis of criminal network vulnerabilities came from the observation that ‘crime levels are not diminishing, despite countless “successes” against individual criminal enterprises’ [@sparrow_1991, p. 256]. While law enforcement agencies have gradually embraced the key player strategy, this tend to be based on the ‘Mr Big’ assumption, and an assessment of its implementation is often missing [@morselli_2009]. Whether we can consider the Cicala network resilient ultimately depends on the expected outcomes of law enforcement intervention. N3’s arrest reduced the rate of information flow as well as the ability to organise the purchase, smuggling, and wholesale of drugs, at least temporarily [@duijn_2014]. However, the network remained active for another year after law enforcement intervention, maintained some of its operational activity, and was eventually dismantled only when most of its members were arrested in July 2010 [@morselli_law-enforcement_2007; @bright_delaney_2013].
+
+This study is a small, additional piece of evidence suggesting that law enforcement interventions may not be as effective as expected given the flexibility and resilience of drug trafficking networks. Even when entire networks are dismantled by law enforcement following multiple arrests, drug markets show their resilience as new dealers replace those who are sentenced and imprisoned [@bouchard_2007; @duijn_2014]. If prohibition remains the preferred policy option by governments, research on the impact of repressive policies on criminal networks structure and activities can help identify effective interventions, and avoid any unintended, harmful consequences [@dickenson_2014; @vargas_2014].
+
+### Acknowledgments
+
+This article is dedicated to Professor Carlo Morselli, who was unlike any other who worked in the field of criminal networks. This article would not exist without his prior work on networks and crime. I would like to thank the two anonymous reviewers and Dr Francesco Calderoni for their constrictive and helpful comments that have significantly improved the manuscript.
+
+### References
+
+<div id="refs"></div>
+
+### Appendix
+
+Figures A1-3 below present the goodness-of-fit plots for the three models in Table 4. The three columns represent the statistics for the degree distribution (left), the distribution of shared partners (centre), and the distribution of geodesic distances (right). The dark solid line represents the observed statistic in the network whereas the box plots represent the same statistic for 100 simulated networks. Despite including a statistic for triadic closure (gwesp), the models underestimate the level of clustering in the networks. This suggests that there might be some assortative mixing processes that are not captured in the models (e.g., because of limited information on the network actors). Overall, the models do a fair job estimating the distribution of geodesic distances, which is not directly related to any of the terms included the models.
+
+```{r gof, include = FALSE}
+
+# test whether the models fit the data
+gof_list <- list() # create empty list
+for (i in 1:3){
+  gof_list[[i]] <- gof(fit_list[[i]], verbose = TRUE, interval = 5e+4) # check gof
+}
+
+```
+
+```{r figure a1, echo = FALSE, out.width = "25%"}
+
+plot(gof_list[[1]], cex.lab = 1.6, cex.axis = 1.6, plotlogodds = TRUE, main = "") # plot gof results
+
+```
+
+<span style="color:darkgrey">Figure A1. Goodness-of-fit diagnostics for Phase 1 model.</span>
+
+```{r figure a2, echo = FALSE, out.width = "25%"}
+
+plot(gof_list[[2]], cex.lab = 1.6, cex.axis = 1.6, plotlogodds = TRUE, main = "") # # repeat for network at time 2
+
+```
+
+<span style="color:darkgrey">Figure A2. Goodness-of-fit diagnostics for Phase 2 model.</span>
+
+```{r figure a3, echo = FALSE, out.width = "25%"}
+
+plot(gof_list[[3]], cex.lab = 1.6, cex.axis = 1.6, plotlogodds = TRUE, main = "") # and then again for network at time 3
+
+```
+
+<span style="color:darkgrey">Figure A3. Goodness-of-fit diagnostics for Phase 3 model.</span>
